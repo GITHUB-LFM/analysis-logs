@@ -37,9 +37,9 @@ module.exports = function () {
         }
         let times = [];
         for(let i=0;i<60;i++){
-            times.push((parseInt(time.getTime()/10000))+i);
+            times.push((parseInt(time.getTime()/1000))+i);
         }
-        let todayStr = Format(new Date(),"yyyyMMhh");
+        let todayStr = Format(new Date(),"yyyyMMdd");
         let ec1 = `cat /logdir2/${todayStr}/*/${hour}_*.log | grep ${appKey} | grep -E '${times.join("|")}' | head -n ${limit}`;
         return getAsync(ec1).then((data, err) => {
             if (err) {
