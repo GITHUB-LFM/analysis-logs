@@ -70,7 +70,7 @@ app.ws.use(route.all('/logs/:appKey/:openId/:uuid', function (ctx) {
     var appKey = ctx.url.split("/")[2];
     var openId = ctx.url.split("/")[3];
     var uuid = ctx.url.split("/")[4];
-    if(openId.indexOf("*")||appKey.indexOf("*")){
+    if(openId.indexOf("*")!=-1||appKey.indexOf("*")!=-1){
         ctx.websocket.send("(openId|appKey)不能包含正则表达式,请检查");
         ctx.websocket.close();
         return;
