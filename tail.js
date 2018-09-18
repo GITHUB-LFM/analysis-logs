@@ -4,7 +4,8 @@ const Koa = require('koa'),
 var fs = require('fs');
 var spawn = require('child_process').spawn;
 var watch = require('watch');
-const logPath = '/Users/huanghuanlai/dounine/github/analysis-logs/logs';
+const logPath = '/logdir2';
+// const logPath = '/Users/huanghuanlai/dounine/github/analysis-logs/logs';
 
 function Format(time, fmt) { //author: meizz
     var o = {
@@ -66,17 +67,11 @@ app.ws.use(function (ctx, next) {
     return next(ctx);
 });
 
-app.ws.use(route.all('/logs/:appKey/:openId/:uuid', function (ctx) {
+app.ws.use(route.all('/logs/:appKey/:openId', function (ctx) {
     var appKey = ctx.url.split("/")[2];
     var openId = ctx.url.split("/")[3];
-    var uuid = ctx.url.split("/")[4];
-    if(openId.indexOf("*")!=-1||appKey.indexOf("*")!=-1){
+    if (openId.indexOf("*") != -1 || appKey.indexOf("*") != -1) {
         ctx.websocket.send("(openId|appKey)不能包含正则表达式,请检查");
-        ctx.websocket.close();
-        return;
-    }
-    if(!uuid||(uuid&&uuid.length<36)){
-        ctx.websocket.send("uuid必需等于36位,请检查");
         ctx.websocket.close();
         return;
     }
@@ -85,7 +80,7 @@ app.ws.use(route.all('/logs/:appKey/:openId/:uuid', function (ctx) {
             ctx.websocket.send(data);
         }
     };
-    tailFilePush({name: uuid, filterFun: myFilter});
+    tailFilePush({name: openId, filterFun: myFilter});
     ctx.websocket.send(JSON.stringify({status: 'success', msg: '用户行为监听中'}));
     ctx.websocket.on('close', function (message) {
         tailFilePop({name: uuid});
