@@ -26,7 +26,11 @@ function Format(time, fmt) { //author: meizz
 const app = websockify(new Koa());
 var filterFuns = [];
 var tailFilePush = function ({name, filterFun}) {
+    if(filterFuns.findIndex(obj => obj.name == name)!=-1){
+        return false;
+    }
     filterFuns.push({name, filterFun});
+    return true;
 };
 var tailFilePop = function ({name}) {
     filterFuns.splice(filterFuns.findIndex(obj => obj.name == name), 1);
@@ -71,7 +75,7 @@ app.ws.use(route.all('/logs/:appKey/:openId', function (ctx) {
     var appKey = ctx.url.split("/")[2];
     var openId = ctx.url.split("/")[3];
     if (openId.indexOf("*") != -1 || appKey.indexOf("*") != -1) {
-        ctx.websocket.send("(openId|appKey)不能包含正则表达式,请检查");
+        ctx.websocket.send(JSON.stringify({status: 'fail', msg: '(openId|appKey)不能包含正则表达式,请检查'}));
         ctx.websocket.close();
         return;
     }
@@ -84,10 +88,14 @@ app.ws.use(route.all('/logs/:appKey/:openId', function (ctx) {
             })
         }
     };
-    tailFilePush({name: openId, filterFun: myFilter});
+    if(!tailFilePush({name: openId+appKey, filterFun: myFilter})){
+        ctx.websocket.send(JSON.stringify({status: 'fail', msg: '一个openId只能打开监听一款appKey数据,请检查是否有其它浏览器在使用'}));
+        ctx.websocket.close();
+        return;
+    }
     ctx.websocket.send(JSON.stringify({status: 'success', msg: '用户行为监听中'}));
     ctx.websocket.on('close', function (message) {
-        tailFilePop({name: uuid});
+        tailFilePop({name: openId+appKey});
         console.log('连接关闭.');
     });
 }));
