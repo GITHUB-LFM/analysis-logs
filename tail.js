@@ -77,7 +77,11 @@ app.ws.use(route.all('/logs/:appKey/:openId', function (ctx) {
     }
     var myFilter = function (data) {
         if (data && data.indexOf(appKey) != -1 && data.indexOf(openId) != -1) {
-            ctx.websocket.send(data);
+            data.split("\n").forEach(line => {
+                if (line && line.indexOf(appKey) != -1 && line.indexOf(openId) != -1) {
+                    ctx.websocket.send(line);
+                }
+            })
         }
     };
     tailFilePush({name: openId, filterFun: myFilter});
