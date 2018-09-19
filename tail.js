@@ -1,57 +1,45 @@
 const Koa = require('koa'),
     route = require('koa-route'),
     websockify = require('koa-websocket');
-var fs = require('fs');
-var spawn = require('child_process').spawn;
-var watch = require('watch');
+let fs = require('fs');
+let spawn = require('child_process').spawn;
+let watch = require('watch');
+let dataFormat = require('./format.js');
 const logPath = '/logdir2';
 // const logPath = '/Users/huanghuanlai/dounine/github/analysis-logs/logs';
 
-function Format(time, fmt) { //author: meizz
-    var o = {
-        "M+": time.getMonth() + 1, //月份
-        "d+": time.getDate(), //日
-        "h+": time.getHours(), //小时
-        "m+": time.getMinutes(), //分
-        "s+": time.getSeconds(), //秒
-        "q+": Math.floor((time.getMonth() + 3) / 3), //季度
-        "S": time.getMilliseconds() //毫秒
-    };
-    if (/(y+)/.test(fmt)) fmt = fmt.replace(RegExp.$1, (time.getFullYear() + "").substr(4 - RegExp.$1.length));
-    for (var k in o)
-        if (new RegExp("(" + k + ")").test(fmt)) fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
-    return fmt;
-}
 
 const app = websockify(new Koa());
-var filterFuns = [];
-var tailFilePush = function ({name, filterFun}) {
-    if(filterFuns.findIndex(obj => obj.name == name)!=-1){
+let filterFuns = [];
+let tailFilePush = function ({name, filterFun}) {
+    if (filterFuns.findIndex(obj => obj.name == name) != -1) {
         return false;
     }
     filterFuns.push({name, filterFun});
     return true;
 };
-var tailFilePop = function ({name}) {
+let tailFilePop = function ({name}) {
     filterFuns.splice(filterFuns.findIndex(obj => obj.name == name), 1);
 };
-var fun = function () {
-    var dayPath = Format(new Date(), "yyyyMMdd") + "/172.16.198.56";
+let fun = function () {
+    let dayPath = dataFormat.format(new Date(), "yyyyMMdd") + "/172.16.198.56";
     if (fs.existsSync(logPath + '/' + dayPath)) {
-        var filenames = fs.readdirSync(logPath + '/' + dayPath).filter(name => {
+        let filenames = fs.readdirSync(logPath + '/' + dayPath).filter(name => {
             return name.startsWith(("0" + new Date().getHours()).slice(-2) + "_")
         }).map(function (file) {
             return `${logPath}/${dayPath}/${file}`
         });
-        var tail = spawn("tail", ["-f", "-n 10"].concat(filenames));
+        let tail = spawn("tail", ["-f", "-n 10"].concat(filenames));
         tail.stdout.on("data", function (data) {
             filterFuns.forEach(fun => {
                 fun["filterFun"](data.toString("utf-8"))
             })
         });
+    } else {
+        console.log(logPath + '/' + dayPath + '路径不存在');
     }
 };
-var preCreateTime = 0;
+let preCreateTime = 0;
 watch.watchTree(logPath, function (f, curr, prev) {
     if (typeof f == "object" && prev === null && curr === null) {
     } else if (prev === null) {
@@ -72,14 +60,14 @@ app.ws.use(function (ctx, next) {
 });
 
 app.ws.use(route.all('/logs/:appKey/:openId', function (ctx) {
-    var appKey = ctx.url.split("/")[2];
-    var openId = ctx.url.split("/")[3];
+    let appKey = ctx.url.split("/")[2];
+    let openId = ctx.url.split("/")[3];
     if (openId.indexOf("*") != -1 || appKey.indexOf("*") != -1) {
         ctx.websocket.send(JSON.stringify({status: 'fail', msg: '(openId|appKey)不能包含正则表达式,请检查'}));
         ctx.websocket.close();
         return;
     }
-    var myFilter = function (data) {
+    let myFilter = function (data) {
         if (data && data.indexOf(appKey) != -1 && data.indexOf(openId) != -1) {
             data.split("\n").forEach(line => {
                 if (line && line.indexOf(appKey) != -1 && line.indexOf(openId) != -1) {
@@ -88,14 +76,14 @@ app.ws.use(route.all('/logs/:appKey/:openId', function (ctx) {
             })
         }
     };
-    if(!tailFilePush({name: openId+appKey, filterFun: myFilter})){
+    if (!tailFilePush({name: openId + appKey, filterFun: myFilter})) {
         ctx.websocket.send(JSON.stringify({status: 'fail', msg: '一个openId只能打开监听一款appKey数据,请检查是否有其它浏览器在使用'}));
         ctx.websocket.close();
         return;
     }
     ctx.websocket.send(JSON.stringify({status: 'success', msg: '用户行为监听中'}));
     ctx.websocket.on('close', function (message) {
-        tailFilePop({name: openId+appKey});
+        tailFilePop({name: openId + appKey});
         console.log('连接关闭.');
     });
 }));
