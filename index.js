@@ -14,10 +14,10 @@ let wsClients = new Map();
 var tail = null;
 let fun = function () {
     let dayPath = dataFormat.format(new Date(), "yyyyMMdd") + "/172.16.198.56";
-    if(tail!=null){
+    if (tail != null) {
         try {
             tail.kill('SIGHUP');
-        }catch (e) {
+        } catch (e) {
             console.log("tail程序关闭异常");
         }
     }
@@ -31,10 +31,10 @@ let fun = function () {
 
         tail = spawn("tail", ["-f"].concat(filenames));
         tail.stdout.on("data", function (data) {
-            for(let filter of wsClients.values()){
+            for (let filter of wsClients.values()) {
                 try {
                     filter(data.toString("utf-8"))
-                }catch (e) {
+                } catch (e) {
                     console.log(e);
                 }
             }
@@ -72,13 +72,13 @@ app.ws.use(route.all('/logs/:appKey/:openId', function (ctx) {
         return;
     }
     let clientId = uuid();
-    wsClients.set(clientId,function (data) {
+    wsClients.set(clientId, function (data) {
         if (data && data.indexOf(appKey) != -1 && data.indexOf(openId) != -1) {
             data.split("\n").forEach(line => {
                 if (line && line.indexOf(appKey) != -1 && line.indexOf(openId) != -1) {
                     try {
                         ctx.websocket.send(line);
-                    }catch (e) {
+                    } catch (e) {
                         console.log('发送异常');
                     }
                 }
@@ -95,10 +95,10 @@ app.ws.use(route.all('/logs/:appKey/:openId', function (ctx) {
     });
 
     ctx.websocket.on('message', function (message) {
-        if(message==='online'){
-            ctx.websocket.send(JSON.stringify({status: 'success', msg: '当前在线人数：'+wsClients.size}));
-        }else if(message==='id'){
-            ctx.websocket.send("你的id为："+clientId);
+        if (message === 'online') {
+            ctx.websocket.send(JSON.stringify({status: 'success', msg: '当前在线人数：' + wsClients.size}));
+        } else if (message === 'id') {
+            ctx.websocket.send("你的id为：" + clientId);
         }
     });
 }));
