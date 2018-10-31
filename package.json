@@ -4,15 +4,11 @@
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
-    "bluebird": "^3.5.1",
-    "forever": "^0.15.3",
     "koa": "^2.5.1",
     "koa-body": "^4.0.3",
     "koa-route": "^3.2.0",
-    "koa-router": "^7.4.0",
     "koa-websocket": "^5.0.1",
-    "node-cmd": "^3.0.0",
-    "tail": "^1.4.0",
+    "uuid": "^3.3.2",
     "watch": "^1.0.2"
   }
 }
